@@ -1,7 +1,7 @@
 {
     "functions": {
-      "api/**/*.{js,ts}": {
-        "maxDuration": 300
+      "pages/api/**/*.js": {
+        "maxDuration": 60
       }
     }
   }
