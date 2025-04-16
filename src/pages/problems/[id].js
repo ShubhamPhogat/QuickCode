@@ -1,87 +1,257 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Play,
   CloudUpload,
-  RefreshCw,
-  Maximize,
   Code,
   CheckCircle,
   FileText,
   BookOpen,
   Share2,
   Star,
-  ChevronDown,
+  AlertCircle,
 } from "lucide-react";
-
-const problem = {
-  id: 1,
-  title: "Two Sum",
-  difficulty: "Easy",
-  description:
-    "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
-  examples: [
-    {
-      input: "nums = [2,7,11,15], target = 9",
-      output: "[0,1]",
-      explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
-    },
-  ],
-  constraints: [
-    "2 <= nums.length <= 10^4",
-    "-10^9 <= nums[i] <= 10^9",
-    "-10^9 <= target <= 10^9",
-    "Only one valid answer exists.",
-  ],
-  tags: ["Array", "Hash Table"],
-  solved: true,
-};
+import axios from "axios";
+import { useRouter } from "next/router";
+import { Toaster, toast } from "react-hot-toast";
 
 const ProblemDetailPage = () => {
   const [activeTab, setActiveTab] = useState("Description");
   const [selectedLanguage, setSelectedLanguage] = useState("JavaScript");
   const [editorCode, setEditorCode] = useState(`
-// Two Sum Solution
-function twoSum(nums, target) {
-  const numMap = new Map();
-  
-  for (let i = 0; i < nums.length; i++) {
-    const complement = target - nums[i];
-    
-    if (numMap.has(complement)) {
-      return [numMap.get(complement), i];
-    }
-    
-    numMap.set(nums[i], i);
-  }
-  
-  return []; // No solution found
-}`);
+// Write your solution here
+function solve(a, b, c, d) {
+  return (a + b + c + d) / 4;
+}
+  `);
+  const [problem, setProblem] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [testCases, setTestCases] = useState([]);
+  const [testResults, setTestResults] = useState([]);
+  const [allTestCase, setAllTestCase] = useState([]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [editorHeight, setEditorHeight] = useState(400);
+  const [isDragging, setIsDragging] = useState(false);
 
   const languages = ["JavaScript", "Python", "Java", "C++", "TypeScript"];
 
+  const wss = useRef(null);
+  const router = useRouter();
+  const resizeRef = useRef(null);
+  const editorContainerRef = useRef(null);
+
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleMouseMove = (e) => {
+    if (isDragging && editorContainerRef.current) {
+      const containerRect = editorContainerRef.current.getBoundingClientRect();
+      const newHeight = Math.max(200, e.clientY - containerRect.top);
+      setEditorHeight(newHeight);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+  };
+
+  const submitCode = async () => {
+    if (!wss.current || wss.current.readyState !== WebSocket.OPEN) {
+      toast.error("Cannot connect to server");
+      return;
+    }
+
+    setIsRunning(true);
+    toast.loading("Submitting code...", { id: "codeSubmission" });
+
+    wss.current.send(
+      JSON.stringify({
+        editorCode,
+        selectedLanguage,
+        problemId: problem?._id,
+        testCase: allTestCase,
+        all: false,
+      })
+    );
+  };
+
+  const fetchProblemDetails = async (id) => {
+    setLoading(true);
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_API_FRONTEND_PROBLEM}/api/problem/get?id=${id}`
+      );
+      console.log(res);
+      if (res && res.data) {
+        setProblem(res.data._doc);
+        setAllTestCase(res.data._doc.testCase);
+
+        if (res.data.testCase && res.data.testCase.length > 0) {
+          const formattedTestCases = formatTestCases(res.data.testCase);
+          setTestCases(formattedTestCases);
+        } else if (
+          res.data._doc.testCase &&
+          res.data._doc.testCase.length > 0
+        ) {
+          const formattedTestCases = formatTestCases(res.data._doc.testCase);
+          setTestCases(formattedTestCases);
+        } else {
+          setTestCases([]);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching problem details:", error);
+      setProblem(null);
+      setTestCases([]);
+      toast.error("Failed to load problem details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTestCases = (rawTestCases) => {
+    return Object.values(rawTestCases)
+      .filter(
+        (testCase) =>
+          typeof testCase === "object" &&
+          testCase !== null &&
+          !Array.isArray(testCase)
+      )
+      .map((testCase, index) => {
+        let inputValues = testCase.input || [];
+
+        return {
+          id: testCase._id || `test-${index}`,
+          name: `Test Case ${index + 1}`,
+          inputs: inputValues,
+          expected: testCase.expected,
+          inputDisplay: Array.isArray(inputValues)
+            ? inputValues.join(", ")
+            : String(inputValues),
+        };
+      });
+  };
+
+  useEffect(() => {
+    const connectWebSocket = () => {
+      try {
+        wss.current = new WebSocket(`${process.env.NEXT_API_WEBSOCKET_URL}`);
+
+        wss.current.onopen = () => {
+          console.log("Connected to the server");
+        };
+
+        wss.current.onmessage = (event) => {
+          const response = JSON.parse(event.data);
+          setIsRunning(false);
+
+          if (response.results) {
+            setTestResults(response.results);
+          }
+
+          if (response.status === 0) {
+            toast.error("Compilation error: " + response.msg, {
+              id: "codeSubmission",
+            });
+          } else if (response.status === 1) {
+            if (response.allPassed) {
+              toast.success("All test cases passed!", { id: "codeSubmission" });
+            } else if (response.failedTestCase) {
+              toast.error(
+                `Test case failed: Expected ${response.failedTestCase.expected}, got ${response.failedTestCase.actual}`,
+                { id: "codeSubmission" }
+              );
+            }
+          }
+        };
+
+        wss.current.onclose = () => {
+          setTimeout(() => {
+            connectWebSocket();
+          }, 1000);
+        };
+      } catch (error) {
+        setTimeout(() => {
+          connectWebSocket();
+        }, 1000);
+      }
+    };
+
+    connectWebSocket();
+
+    return () => {
+      if (wss?.current && wss.current.readyState === WebSocket.OPEN) {
+        wss.current.close();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (router.isReady) {
+      const { id } = router.query;
+      if (id) {
+        fetchProblemDetails(id);
+      }
+    }
+  }, [router.isReady, router.query]);
+
+  if (loading) {
+    return (
+      <div className="bg-gray-900 text-white min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <p>Loading problem details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!problem) {
+    return (
+      <div className="bg-gray-900 text-white min-h-screen flex items-center justify-center">
+        <div className="bg-gray-800 p-6 rounded-lg max-w-md">
+          <h2 className="text-xl font-bold mb-4">Problem Not Found</h2>
+          <p className="mb-4">
+            The problem you are looking for could not be loaded.
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-gray-900 text-white min-h-screen flex">
-      {/* Left Sidebar - Problem Description */}
-      <div className="w-1/2 p-6 overflow-y-auto border-r border-gray-700">
-        {/* Problem Header */}
-        <div className="flex justify-between items-center mb-4">
+    <div className="bg-gray-900 text-white min-h-screen flex flex-col md:flex-row">
+      <Toaster position="top-center" />
+
+      <div className="w-full md:w-1/2 p-4 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-700">
+        <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
           <div className="flex items-center space-x-4">
-            <span className="text-2xl font-bold">
-              {problem.id}. {problem.title}
+            <span className="text-xl md:text-2xl font-bold truncate">
+              {problem._id ? problem._id.substring(0, 6) : "1"}. {problem.title}
             </span>
             <span
               className={`
               px-2 py-1 rounded-md text-sm font-semibold
               ${
-                problem.difficulty === "Easy"
+                problem.difficulty?.toLowerCase() === "easy"
                   ? "bg-green-600/20 text-green-400"
-                  : problem.difficulty === "Medium"
+                  : problem.difficulty?.toLowerCase() === "medium"
                   ? "bg-yellow-600/20 text-yellow-400"
                   : "bg-red-600/20 text-red-400"
               }
             `}
             >
-              {problem.difficulty}
+              {problem.difficulty || "Medium"}
             </span>
             {problem.solved && <CheckCircle className="text-green-500" />}
           </div>
@@ -95,13 +265,12 @@ function twoSum(nums, target) {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex space-x-4 border-b border-gray-700 mb-4">
+        <div className="flex space-x-4 overflow-x-auto border-b border-gray-700 mb-4">
           {["Description", "Editorial", "Solutions", "Submissions"].map(
             (tab) => (
               <button
                 key={tab}
-                className={`py-2 ${
+                className={`py-2 whitespace-nowrap ${
                   activeTab === tab
                     ? "border-b-2 border-blue-500 text-white"
                     : "text-gray-400"
@@ -112,68 +281,66 @@ function twoSum(nums, target) {
               </button>
             )
           )}
-          <button className="ml-auto hover:bg-gray-700 p-2 rounded">
-            <Maximize size={20} />
-          </button>
         </div>
 
-        {/* Problem Description Content */}
-        <div>
+        <div className="overflow-y-auto max-h-[calc(100vh-200px)] md:max-h-[calc(100vh-150px)] pr-2">
           <p className="mb-4">{problem.description}</p>
 
-          <div className="mb-4">
-            <h3 className="font-semibold mb-2">Examples:</h3>
-            {problem.examples.map((example, index) => (
-              <div key={index} className="bg-gray-800 p-4 rounded-md mb-2">
-                <p>
-                  <strong>Input:</strong> {example.input}
-                </p>
-                <p>
-                  <strong>Output:</strong> {example.output}
-                </p>
-                <p>
-                  <strong>Explanation:</strong> {example.explanation}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-2">Constraints:</h3>
-            <ul className="list-disc list-inside">
-              {problem.constraints.map((constraint, index) => (
-                <li key={index} className="text-gray-300">
-                  {constraint}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="mt-4">
-            <h3 className="font-semibold mb-2">Related Topics:</h3>
-            <div className="flex space-x-2">
-              {problem.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="bg-gray-800 px-2 py-1 rounded-md text-sm"
-                >
-                  {tag}
-                </span>
+          {testCases.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-semibold mb-2">Examples:</h3>
+              {testCases.slice(0, 3).map((example, index) => (
+                <div key={index} className="bg-gray-800 p-4 rounded-md mb-2">
+                  <p>
+                    <strong>Input:</strong> {example.inputDisplay}
+                  </p>
+                  <p>
+                    <strong>Output:</strong> {example.expected}
+                  </p>
+                  {example.explanation && (
+                    <p>
+                      <strong>Explanation:</strong> {example.explanation}
+                    </p>
+                  )}
+                </div>
               ))}
             </div>
-          </div>
+          )}
+
+          {problem.constraints && (
+            <div>
+              <h3 className="font-semibold mb-2">Constraints:</h3>
+              <ul className="list-disc list-inside">
+                <li className="text-gray-300">{problem.constraints}</li>
+              </ul>
+            </div>
+          )}
+
+          {problem.tags && problem.tags.length > 0 && (
+            <div className="mt-4">
+              <h3 className="font-semibold mb-2">Related Topics:</h3>
+              <div className="flex flex-wrap gap-2">
+                {problem.tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="bg-gray-800 px-2 py-1 rounded-md text-sm"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Right Coding Area */}
-      <div className="w-1/2 flex flex-col">
-        {/* Coding Header */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-700">
-          <div className="flex items-center space-x-4">
+      <div className="w-full md:w-1/2 flex flex-col">
+        <div className="flex flex-wrap justify-between items-center p-4 border-b border-gray-700 gap-2">
+          <div className="flex items-center space-x-2 overflow-x-auto w-full md:w-auto">
             <select
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="bg-gray-800 border border-gray-700 rounded-md px-3 py-2"
+              className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-sm"
             >
               {languages.map((lang) => (
                 <option key={lang} value={lang}>
@@ -181,64 +348,55 @@ function twoSum(nums, target) {
                 </option>
               ))}
             </select>
-            <span>|</span>
-            <div className="flex space-x-2">
-              <button className="flex items-center space-x-1 bg-gray-800 px-3 py-2 rounded-md">
-                <Code size={16} /> <span>Code</span>
+            <span className="hidden md:inline">|</span>
+            <div className="flex space-x-1">
+              <button className="flex items-center space-x-1 bg-gray-800 px-2 py-1 rounded-md text-sm">
+                <Code size={14} /> <span>Code</span>
               </button>
-              <button className="flex items-center space-x-1 bg-gray-800 px-3 py-2 rounded-md">
-                <FileText size={16} /> <span>Testcase</span>
+              <button className="flex items-center space-x-1 bg-gray-800 px-2 py-1 rounded-md text-sm">
+                <FileText size={14} /> <span>Testcase</span>
               </button>
-              <button className="flex items-center space-x-1 bg-gray-800 px-3 py-2 rounded-md">
-                <BookOpen size={16} /> <span>Test Result</span>
+              <button className="flex items-center space-x-1 bg-gray-800 px-2 py-1 rounded-md text-sm">
+                <BookOpen size={14} /> <span>Test Result</span>
               </button>
             </div>
           </div>
-          <div className="flex space-x-2">
-            <button className="flex items-center space-x-1 bg-green-600 text-white px-4 py-2 rounded-md">
-              <Play size={16} /> <span>Run</span>
-            </button>
-            <button className="flex items-center space-x-1 bg-green-600 text-white px-4 py-2 rounded-md">
-              <CloudUpload size={16} /> <span>Submit</span>
-            </button>
-          </div>
+          <button
+            onClick={submitCode}
+            disabled={isRunning}
+            className={`flex items-center space-x-1 ${
+              isRunning ? "bg-gray-600" : "bg-blue-600 hover:bg-blue-700"
+            } text-white px-4 py-2 rounded-md transition-colors duration-200 w-full md:w-auto mt-2 md:mt-0 justify-center`}
+          >
+            {isRunning ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-1"></div>
+                <span>Running...</span>
+              </>
+            ) : (
+              <>
+                <CloudUpload size={16} /> <span>Submit</span>
+              </>
+            )}
+          </button>
         </div>
 
-        {/* Code Editor Area */}
-        <div className="flex-grow p-4">
+        <div
+          ref={editorContainerRef}
+          className="relative flex-grow"
+          style={{ minHeight: `${editorHeight}px` }}
+        >
           <textarea
-            className="w-full h-full bg-gray-800 text-white p-4 font-mono text-sm rounded-md"
+            className="w-full h-full bg-gray-800 text-white p-4 font-mono text-sm rounded-md resize-none"
             value={editorCode}
             onChange={(e) => setEditorCode(e.target.value)}
+            style={{ height: "100%" }}
           />
-        </div>
-
-        {/* Test Cases */}
-        <div className="border-t border-gray-700 p-4">
-          <div className="flex space-x-2 mb-2">
-            <button className="bg-gray-800 px-3 py-1 rounded-md">Case 1</button>
-            <button className="bg-gray-800 px-3 py-1 rounded-md">Case 2</button>
-            <button className="bg-gray-800 px-3 py-1 rounded-md">Case 3</button>
-            <button className="bg-gray-800 px-3 py-1 rounded-md">+</button>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block mb-2">nums =</label>
-              <input
-                type="text"
-                defaultValue="[2,7,11,15]"
-                className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block mb-2">target =</label>
-              <input
-                type="text"
-                defaultValue="9"
-                className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2"
-              />
-            </div>
-          </div>
+          <div
+            ref={resizeRef}
+            className="absolute bottom-0 left-0 right-0 h-2 bg-gray-700 cursor-row-resize hover:bg-blue-500"
+            onMouseDown={handleMouseDown}
+          ></div>
         </div>
       </div>
     </div>

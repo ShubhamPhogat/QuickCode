@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Search, Lock } from "lucide-react";
 import { useRouter } from "next/router";
+import axios from "axios";
 
 const problems = [
   {
@@ -94,6 +95,18 @@ const ProblemList = () => {
     console.log(randomIndex);
     setrandomIndex(randomIndex);
   };
+
+  const fetchAllProblems = async () => {
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_API_FRONTEND_PROBLEM}/api/problem/get`
+      );
+    } catch (error) {}
+  };
+
+  useEffect(() => {
+    fetchAllProblems();
+  }, []);
 
   const navigate = (id) => {
     Router.push(`/problems/${id}`);
