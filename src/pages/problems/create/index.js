@@ -125,9 +125,10 @@ export default function Home() {
 
   const handleGenerateSolution = async () => {
     setLoading(true);
+    console.log(process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM);
     try {
       const response = await axios.post(
-        `${process.env.NEXT_API_FRONTEND_PROBLEM}/api/problem/generate`,
+        `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/generate`,
         { problem, constraints, hint }
       );
       setSolution(response.data);
@@ -152,7 +153,7 @@ export default function Home() {
     try {
       setGeneratingTestLoader(true);
       const tests = await axios.post(
-        `${process.env.NEXT_API_FRONTEND_PROBLEM}/api/problem/generate/tests`,
+        `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/generate/tests`,
         {
           code: codeValue,
           problem,

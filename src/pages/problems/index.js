@@ -99,7 +99,7 @@ const ProblemList = () => {
   const fetchAllProblems = async () => {
     try {
       const res = await axios.get(
-        `${process.env.NEXT_API_FRONTEND_PROBLEM}/api/problem/get`
+        `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/get`
       );
     } catch (error) {}
   };

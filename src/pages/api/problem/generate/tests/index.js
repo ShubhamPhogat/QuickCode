@@ -174,7 +174,7 @@ export default async function (req, res) {
       testCases.push(expandTestCaseObject(tc));
     }
 
-    const ws = new WebSocket(`${process.env.NEXT_API_WEBSOCKET_URL}`);
+    const ws = new WebSocket(`${process.env.NEXT_PUBLIC_API_WEBSOCKET_URL}`);
     const result = await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error("timeout ...."));

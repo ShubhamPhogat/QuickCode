@@ -83,7 +83,7 @@ function solve(a, b, c, d) {
     setLoading(true);
     try {
       const res = await axios.get(
-        `${process.env.NEXT_API_FRONTEND_PROBLEM}/api/problem/get?id=${id}`
+        `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/get?id=${id}`
       );
       console.log(res);
       if (res && res.data) {
@@ -139,7 +139,9 @@ function solve(a, b, c, d) {
   useEffect(() => {
     const connectWebSocket = () => {
       try {
-        wss.current = new WebSocket(`${process.env.NEXT_API_WEBSOCKET_URL}`);
+        wss.current = new WebSocket(
+          `${process.env.NEXT_PUBLIC_API_WEBSOCKET_URL}`
+        );
 
         wss.current.onopen = () => {
           console.log("Connected to the server");

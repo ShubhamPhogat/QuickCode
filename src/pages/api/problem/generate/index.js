@@ -1,7 +1,7 @@
 import { OpenAI } from "openai";
 console.log("api key ", process.env.NEXT_API_OPEN_API);
 const openai = new OpenAI({
-  apiKey: process.env.NEXT_API_OPEN_API,
+  apiKey: process.env.NEXT_PUBLIC_API_OPEN_API,
 });
 export default async function (req, res) {
   if (req.method !== "POST") {
