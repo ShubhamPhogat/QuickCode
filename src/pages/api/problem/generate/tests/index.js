@@ -178,7 +178,7 @@ export default async function (req, res) {
     const result = await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error("timeout ...."));
-      }, 30000);
+      }, 300000);
 
       ws.on("open", () => {
         ws.send(
