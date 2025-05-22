@@ -9,11 +9,18 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@next-auth/mongodb-adapter": "^1.1.3",
+    "@theinternetfolks/snowflake": "^1.3.0",
     "axios": "^1.8.4",
+    "bcryptjs": "^3.0.2",
+    "codemirror": "^5.65.19",
     "framer-motion": "^12.6.3",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.483.0",
+    "mongodb": "^6.16.0",
     "mongoose": "^8.13.0",
     "next": "15.2.4",
+    "next-auth": "^4.24.11",
     "next-themes": "^0.4.6",
     "openai": "^4.93.0",
     "openapi": "^1.0.1",

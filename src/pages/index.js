@@ -1,4 +1,6 @@
 import Navbar from "@/components/Navbar";
+import { signOut } from "next-auth/react";
+import { useRouter } from "next/router";
 import React, { useState, useEffect } from "react";
 
 // Custom typing animation without external dependencies
@@ -43,7 +45,7 @@ function TypedAnimation({ texts, className }) {
 }
 
 export default function LandingPage() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -54,6 +56,30 @@ export default function LandingPage() {
     'console.log("Hello World");',
   ];
 
+  const getLocalStorage = () => {
+    if (typeof window !== "undefined") {
+      return window.localStorage;
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  const router = useRouter();
+
+  const logOut = async () => {
+    await signOut({ redirect: false });
+    const stoarage = getLocalStorage();
+    if (Storage) {
+      stoarage.removeItem("authToken");
+    }
+    router.push("/auth");
+  };
   return (
     <div
       className={`min-h-screen w-full transition-colors duration-300 ${
@@ -77,6 +103,7 @@ export default function LandingPage() {
         darkMode={darkMode}
         setDarkMode={setDarkMode}
         isAdmin={isAdmin}
+        logOut={logOut}
       />
 
       {/* Main Content */}

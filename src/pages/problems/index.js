@@ -3,58 +3,6 @@ import { Search, Lock } from "lucide-react";
 import { useRouter } from "next/router";
 import axios from "axios";
 
-const problems = [
-  {
-    id: 3394,
-    title: "Check if Grid can be Cut into Sections",
-    difficulty: "Medium",
-    acceptance: 62.5,
-    solved: false,
-  },
-  {
-    id: 1,
-    title: "Two Sum",
-    difficulty: "Easy",
-    acceptance: 55.2,
-    solved: true,
-  },
-  {
-    id: 2,
-    title: "Add Two Numbers",
-    difficulty: "Medium",
-    acceptance: 45.6,
-    solved: true,
-  },
-  {
-    id: 3,
-    title: "Longest Substring Without Repeating Characters",
-    difficulty: "Medium",
-    acceptance: 36.4,
-    solved: true,
-  },
-  {
-    id: 4,
-    title: "Median of Two Sorted Arrays",
-    difficulty: "Hard",
-    acceptance: 43.1,
-    solved: true,
-  },
-  {
-    id: 5,
-    title: "Longest Palindromic Substring",
-    difficulty: "Medium",
-    acceptance: 35.4,
-    solved: true,
-  },
-  {
-    id: 6,
-    title: "Zigzag Conversion",
-    difficulty: "Medium",
-    acceptance: 50.9,
-    solved: false,
-  },
-];
-
 const DifficultyBadge = ({ difficulty }) => {
   const colorMap = {
     Easy: "text-green-600",
@@ -70,47 +18,74 @@ const DifficultyBadge = ({ difficulty }) => {
 };
 
 const ProblemList = () => {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTopics] = useState(["All Topics"]);
   const [selectedDifficulty, setSelectedDifficulty] = useState("All");
-  const [randomIndex, setrandomIndex] = useState(-1);
-  const Router = useRouter();
+  const [problems, setProblems] = useState([]);
+  const [randomIndex, setRandomIndex] = useState(-1);
+  const [isClient, setIsClient] = useState(false);
 
-  var filteredProblems = problems.filter((prob) => {
-    return (
-      (prob.difficulty === selectedDifficulty ||
-        selectedDifficulty === "All") &&
-      (searchTerm === "" ||
-        prob.title
-          .toLocaleLowerCase()
-          .includes(searchTerm.toLocaleLowerCase())) &&
-      (randomIndex === -1 || prob.id === randomIndex)
-    );
-  });
+  // Fix 1: Use a single router instance
+  // Fix 2: Add client-side check with useEffect
+  useEffect(() => {
+    setIsClient(true);
+    fetchAllProblems();
+  }, []);
 
   const generateRandomQues = () => {
     setSelectedDifficulty("All");
     setSearchTerm("");
     const randomIndex = Math.floor(Math.random() * problems.length);
-    console.log(randomIndex);
-    setrandomIndex(randomIndex);
+    setRandomIndex(randomIndex);
   };
 
   const fetchAllProblems = async () => {
-    try {
-      const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/get`
-      );
-    } catch (error) {}
-  };
+    // Fix 3: Move localStorage access inside useEffect
+    if (typeof window !== "undefined") {
+      try {
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          router.push("/auth");
+          return;
+        }
 
-  useEffect(() => {
-    fetchAllProblems();
-  }, []);
+        const res = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/UserProblem`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        console.log(res.data.data);
+
+        if (res && res.data) {
+          setProblems(res.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching problems:", error);
+      }
+    }
+  };
 
   const navigate = (id) => {
-    Router.push(`/problems/${id}`);
+    router.push(`/problems/${id}`);
   };
+
+  // Fix 4: Calculate filtered problems within render
+  const filteredProblems = problems.filter((prob) => {
+    return (
+      (prob.difficulty === selectedDifficulty ||
+        selectedDifficulty === "All") &&
+      (searchTerm === "" ||
+        prob.title.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (randomIndex === -1 || prob.id === randomIndex)
+    );
+  });
+
+  // Fix 5: Handle SSR/CSR mismatch with conditional rendering
+  if (!isClient) {
+    return (
+      <div className="bg-gray-900 text-white min-h-screen p-6">Loading...</div>
+    );
+  }
 
   return (
     <div className="bg-gray-900 text-white min-h-screen p-6">
@@ -141,7 +116,7 @@ const ProblemList = () => {
             className="bg-gray-800 border border-gray-700 rounded-md px-3 py-2"
             value={selectedDifficulty}
             onChange={(e) => {
-              setrandomIndex(-1);
+              setRandomIndex(-1);
               setSelectedDifficulty(e.target.value);
             }}
           >
@@ -165,7 +140,7 @@ const ProblemList = () => {
               className="w-full bg-gray-800 border border-gray-700 rounded-md px-10 py-2"
               value={searchTerm}
               onChange={(e) => {
-                setrandomIndex(-1);
+                setRandomIndex(-1);
                 setSearchTerm(e.target.value);
               }}
             />
@@ -193,32 +168,38 @@ const ProblemList = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredProblems.map((problem) => (
-              <tr
-                key={problem.id}
-                className="border-b border-gray-700 hover:bg-gray-800"
-              >
-                <td className="py-3 px-4">{problem.solved ? "✓" : ""}</td>
-                <td
-                  onClick={() => {
-                    navigate(problem.id);
-                  }}
-                  className="py-3 px-4"
+            {filteredProblems.length > 0 ? (
+              filteredProblems.map((problem) => (
+                <tr
+                  key={problem.id}
+                  className="border-b border-gray-700 hover:bg-gray-800"
                 >
-                  {problem.id}. {problem.title}
-                </td>
-                <td className="py-3 px-4">
-                  <Lock size={16} className="text-gray-500" />
-                </td>
-                <td className="py-3 px-4">{problem.acceptance}%</td>
-                <td className="py-3 px-4">
-                  <DifficultyBadge difficulty={problem.difficulty} />
-                </td>
-                <td className="py-3 px-4">
-                  <Lock size={16} className="text-gray-500" />
+                  <td className="py-3 px-4">{problem.solved ? "✓" : ""}</td>
+                  <td
+                    onClick={() => navigate(problem._id)}
+                    className="py-3 px-4 cursor-pointer"
+                  >
+                    {problem.id}. {problem.title}
+                  </td>
+                  <td className="py-3 px-4">
+                    <Lock size={16} className="text-gray-500" />
+                  </td>
+                  <td className="py-3 px-4">{problem.acceptance}%</td>
+                  <td className="py-3 px-4">
+                    <DifficultyBadge difficulty={problem.difficulty} />
+                  </td>
+                  <td className="py-3 px-4">
+                    <Lock size={16} className="text-gray-500" />
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="6" className="py-3 px-4 text-center">
+                  No problems to show
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

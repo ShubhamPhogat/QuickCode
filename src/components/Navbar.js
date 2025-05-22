@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 
-export default function Navbar({ darkMode, isAdmin, isLoggedIn, setDarkMode }) {
+export default function Navbar({
+  darkMode,
+  isAdmin,
+  isLoggedIn,
+  setDarkMode,
+  logOut,
+}) {
   const toggleTheme = () => {
     setDarkMode(!darkMode);
   };
@@ -31,19 +38,8 @@ export default function Navbar({ darkMode, isAdmin, isLoggedIn, setDarkMode }) {
           </a>
 
           <Link href="/problems/create">Create</Link>
-          {isLoggedIn && !isAdmin && (
-            <>
-              <a href="#" className="hover:opacity-80">
-                Compete
-              </a>
-              <a href="#" className="hover:opacity-80">
-                Create
-              </a>
-              <a href="#" className="hover:opacity-80">
-                Support
-              </a>
-            </>
-          )}
+          <Link href="/problems">Practice</Link>
+
           {isAdmin && (
             <a href="#" className="hover:opacity-80">
               Admin
@@ -63,7 +59,7 @@ export default function Navbar({ darkMode, isAdmin, isLoggedIn, setDarkMode }) {
             {darkMode ? "☀️" : "🌙"}
           </button>
           <button
-            onClick={() => setIsLoggedIn(!isLoggedIn)}
+            onClick={logOut}
             className={`px-4 py-2 rounded-md ${
               darkMode
                 ? "bg-blue-600 hover:bg-blue-700"
@@ -72,14 +68,6 @@ export default function Navbar({ darkMode, isAdmin, isLoggedIn, setDarkMode }) {
           >
             {isLoggedIn ? "Logout" : "Login"}
           </button>
-          {isLoggedIn && (
-            <button
-              onClick={() => setIsAdmin(!isAdmin)}
-              className="px-2 py-1 text-xs rounded border"
-            >
-              Toggle Admin
-            </button>
-          )}
         </div>
       </nav>
     </header>

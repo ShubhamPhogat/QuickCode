@@ -12,6 +12,7 @@ import {
 import axios from "axios";
 import { useRouter } from "next/router";
 import { Toaster, toast } from "react-hot-toast";
+import CodeEditor from "@/utils/CodeEditor";
 
 const ProblemDetailPage = () => {
   const [activeTab, setActiveTab] = useState("Description");
@@ -59,6 +60,30 @@ function solve(a, b, c, d) {
     document.removeEventListener("mouseup", handleMouseUp);
   };
 
+  const { id } = router.query;
+  const localStorageKey = `code-editor-${id}`;
+  useEffect(() => {
+    const savedCode = localStorage.getItem(localStorageKey);
+    if (savedCode) {
+      setEditorCode(savedCode);
+    } else {
+      // Set default code if no saved code exists
+      setEditorCode(`
+// Write your solution here
+function solve(a, b, c, d) {
+  return (a + b + c + d) / 4;
+}
+      `);
+    }
+  }, [localStorageKey]);
+
+  const handleCodeChange = (value) => {
+    setEditorCode(value);
+    // Save to localStorage whenever code changes
+    localStorage.setItem(localStorageKey, value);
+    console.log("Code updated and saved:", value);
+  };
+
   const submitCode = async () => {
     if (!wss.current || wss.current.readyState !== WebSocket.OPEN) {
       toast.error("Cannot connect to server");
@@ -79,12 +104,26 @@ function solve(a, b, c, d) {
     );
   };
 
-  const fetchProblemDetails = async (id) => {
+  const fetchProblemDetails = async (id, RQP) => {
     setLoading(true);
     try {
-      const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/get?id=${id}`
-      );
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        router.push("/auth");
+      }
+
+      let res = null;
+      if (RQP === "true") {
+        res = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/get?id=${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        res = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/UserProblem?id=${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
       console.log(res);
       if (res && res.data) {
         setProblem(res.data._doc);
@@ -194,9 +233,9 @@ function solve(a, b, c, d) {
 
   useEffect(() => {
     if (router.isReady) {
-      const { id } = router.query;
+      const { id, RQP } = router.query;
       if (id) {
-        fetchProblemDetails(id);
+        fetchProblemDetails(id, RQP);
       }
     }
   }, [router.isReady, router.query]);
@@ -383,22 +422,12 @@ function solve(a, b, c, d) {
           </button>
         </div>
 
-        <div
-          ref={editorContainerRef}
-          className="relative flex-grow"
-          style={{ minHeight: `${editorHeight}px` }}
-        >
-          <textarea
-            className="w-full h-full bg-gray-800 text-white p-4 font-mono text-sm rounded-md resize-none"
-            value={editorCode}
-            onChange={(e) => setEditorCode(e.target.value)}
-            style={{ height: "100%" }}
+        <div className="w-full h-[500px] max-w-4xl mx-auto">
+          <CodeEditor
+            initialCode={editorCode}
+            language="javascript"
+            onChange={handleCodeChange}
           />
-          <div
-            ref={resizeRef}
-            className="absolute bottom-0 left-0 right-0 h-2 bg-gray-700 cursor-row-resize hover:bg-blue-500"
-            onMouseDown={handleMouseDown}
-          ></div>
         </div>
       </div>
     </div>

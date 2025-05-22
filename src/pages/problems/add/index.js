@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import axios from "axios";
+import { useRouter } from "next/router";
 import React, { useState } from "react";
 
 // Custom multiselect component for tags
@@ -146,6 +147,8 @@ export default function AddProblemForm() {
     'console.log("Hello World");',
   ];
 
+  const router = useRouter();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Handle form submission logic here
@@ -159,14 +162,27 @@ export default function AddProblemForm() {
     });
 
     try {
-      const res = await axios.post("http://localhost:3000/api/problem/add", {
-        title,
-        description,
-        difficulty,
-        constraints,
-        testCases,
-        tags: selectedTags,
-      });
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        router.push("/auth");
+      }
+
+      const res = await axios.post(
+        "http://localhost:3000/api/problem/add",
+        {
+          title,
+          description,
+          difficulty,
+          constraints,
+          testCases,
+          tags: selectedTags,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       console.log(res);
 
       alert("Problem submitted successfully!");

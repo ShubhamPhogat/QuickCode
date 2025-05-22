@@ -1,5 +1,5 @@
 import { Problem } from "@/models/problemModel";
-import connectDb from "../../../db.js";
+import connectDb from "../../../utils/db.js";
 export default async function (req, res) {
   connectDb();
   switch (req.method) {

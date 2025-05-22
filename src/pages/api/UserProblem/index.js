@@ -1,10 +1,11 @@
 import ConnectDb from "@/utils/db";
-import { Problem } from "@/models/problemModel";
 import { errorResponse } from "@/utils/response";
 import authChecker from "@/middleware/authChecker";
 import limitCheker from "@/middleware/limitCheker";
+import { UserProblem } from "@/models/userProblemModel";
 
 export default async function (req, res) {
+  console.log("hit");
   if (req.method != "GET") {
     return res
       .status(300)
@@ -12,22 +13,16 @@ export default async function (req, res) {
   }
   ConnectDb();
   const user = await authChecker(req, res);
-  const checkLimit = await limitCheker(req, res, user._id);
-  if (!checkLimit) {
-    res
-      .status(301)
-      .json(
-        errorResponse(
-          "Daily limit completed , pleases upgrade to premium plan to cntinue",
-          "USER_ERROR"
-        )
-      );
+  if (!user) {
+    return;
   }
+
   const { id } = req.query;
+  console.log("this is id", id);
   if (!id) {
     try {
-      const data = await Problem.find().select(
-        "title difficult acceptance _id"
+      const data = await UserProblem.find().select(
+        "title difficulty acceptance _id"
       );
       if (data) {
         return res.status(200).json({ data });
@@ -39,11 +34,11 @@ export default async function (req, res) {
     }
   } else {
     try {
-      const data = await Problem.findById(id);
+      const data = await UserProblem.findById(id);
       if (!data) {
         res.status(404).json({ message: "no such problemm exists" });
       }
-      console.log("fetching problem", data);
+      console.log("fetching problem", data, id);
       res.status(200).json({ ...data, testCase: data.testCase.slice(0, 3) });
     } catch (error) {
       console.log(error, "error in finding by id ");

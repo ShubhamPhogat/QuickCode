@@ -5,6 +5,7 @@ import CodeEditor from "@/components/CodeEditor";
 import Loader from "@/components/Loader";
 import axios from "axios";
 import ReactConfetti from "react-confetti";
+import { useRouter } from "next/router";
 
 const TypingText = ({ texts, className }) => {
   const [displayText, setDisplayText] = useState("");
@@ -82,6 +83,13 @@ export default function Home() {
     });
   };
 
+  const router = useRouter();
+  const [isToggled, setIsToggled] = useState(false);
+
+  const handleToggle = () => {
+    setIsToggled((prev) => !prev);
+  };
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setWindowDimension({
@@ -125,16 +133,47 @@ export default function Home() {
 
   const handleGenerateSolution = async () => {
     setLoading(true);
-    console.log(process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM);
     try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        router.push("/auth");
+      }
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/generate`,
-        { problem, constraints, hint }
+        { problem, constraints, hint },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
+
       setSolution(response.data);
       setCodeValue(response.data.code);
     } catch (error) {
-      console.error("Error generating solution:", error);
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          if (error.response.status === 401) {
+            alert("You are not authenticated. Please login again.");
+            router.push("/auth");
+            return;
+          } else if (error.response.status === 301) {
+            alert(
+              "Your Daily Maximum Limit is reached. Please upgrade your account to continue."
+            );
+            return;
+          } else {
+            console.error("API error:", error.response.data);
+            alert("An unexpected error occurred.");
+          }
+        } else {
+          console.error("No response from server:", error);
+          alert("Server not responding. Please try again later.");
+        }
+      } else {
+        console.error("Unknown error:", error);
+        alert("An unexpected error occurred.");
+      }
     } finally {
       setLoading(false);
     }
@@ -151,6 +190,10 @@ export default function Home() {
 
   async function generateTestCase() {
     try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        router.push("/auth");
+      }
       setGeneratingTestLoader(true);
       const tests = await axios.post(
         `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/generate/tests`,
@@ -158,6 +201,12 @@ export default function Home() {
           code: codeValue,
           problem,
           constraint: constraints,
+          recruiterQuestion: isToggled,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
@@ -167,8 +216,29 @@ export default function Home() {
         setShowConfetti(true); // Trigger confetti
       }
     } catch (error) {
-      console.error("Error generating test cases:", error);
-      setGeneratingTestLoader(false);
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          if (error.response.status === 401) {
+            alert("You are not authenticated. Please login again.");
+            router.push("/auth");
+            return;
+          } else if (error.response.status === 301) {
+            alert(
+              "Your Daily Maximum Limit is reached. Please upgrade your account to continue."
+            );
+            return;
+          } else {
+            console.error("API error:", error.response.data);
+            alert("An unexpected error occurred.");
+          }
+        } else {
+          console.error("No response from server:", error);
+          alert("Server not responding. Please try again later.");
+        }
+      } else {
+        console.error("Unknown error:", error);
+        alert("An unexpected error occurred.");
+      }
     }
   }
 
@@ -333,6 +403,31 @@ export default function Home() {
             </h3>
             <CodeEditor code={codeValue} setCode={setCodeValue} />
           </motion.div>
+          <p>
+            <h2 className="text-amber-500 font-bold"> Note</h2>
+            Are You a Recruiter ? , If you are a recruiter it is recommended to
+            check this , in order to keep the question private to you .
+          </p>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isToggled}
+              onChange={handleToggle}
+              className="hidden"
+            />
+            <div
+              className={`w-12 h-6 flex items-center bg-gray-300 rounded-full p-1 ${
+                isToggled ? "bg-green-500" : "bg-gray-400"
+              }`}
+            >
+              <div
+                className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ${
+                  isToggled ? "translate-x-6" : "translate-x-0"
+                }`}
+              />
+            </div>
+            <span>{isToggled ? "ON" : "OFF"}</span>
+          </label>
 
           <motion.button
             initial={{ y: 20, opacity: 0 }}
@@ -342,8 +437,11 @@ export default function Home() {
             disabled={generatingTestLoader}
             className="px-6 py-3 rounded-full bg-blue-600/80 hover:bg-blue-700/80 text-white font-medium transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-700/50 focus:ring-offset-2 disabled:opacity-50 flex items-center"
           >
-            {generatingTestLoader ? <Loader className="mr-2" /> : null}
-            Auto Generate Test Cases
+            {generatingTestLoader ? (
+              <Loader className="mr-2" />
+            ) : (
+              " Auto Generate Test Cases"
+            )}
           </motion.button>
 
           {problemUrl && (

@@ -1,3 +1,6 @@
+import authChecker from "@/middleware/authChecker";
+import limitCheker from "@/middleware/limitCheker";
+import { errorResponse } from "@/utils/response";
 import { OpenAI } from "openai";
 console.log("api key ", process.env.NEXT_API_OPEN_API);
 const openai = new OpenAI({
@@ -11,6 +14,24 @@ export default async function (req, res) {
   console.log(problem, constraints);
   if (!problem || problem.length === 0) {
     return res.status(400).json({ message: "problem is required" });
+  }
+
+  const user = await authChecker(req, res);
+  if (!user) {
+    return;
+  }
+  console.log("this is user", user);
+  const checkLimit = await limitCheker(req, res, user._id, 1);
+  if (!checkLimit) {
+    res
+      .status(301)
+      .json(
+        errorResponse(
+          "Daily limit completed , pleases upgrade to premium plan to cntinue",
+          "USER_ERROR"
+        )
+      );
+    return;
   }
 
   const messages = [

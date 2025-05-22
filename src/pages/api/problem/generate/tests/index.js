@@ -1,10 +1,15 @@
 const WebSocket = require("ws");
 
-import ConnectDb from "@/db";
+import ConnectDb from "@/utils/db";
 import { Problem } from "@/models/problemModel";
 import { OpenAI } from "openai";
+import authChecker from "@/middleware/authChecker";
+import limitCheker from "@/middleware/limitCheker";
+import { errorResponse } from "@/utils/response";
+import { UserProblem } from "@/models/userProblemModel";
+console.log(process.env.NEXT_PUBLIC_API_OPEN_API);
 const openai = new OpenAI({
-  apiKey: process.env.NEXT_API_OPEN_API,
+  apiKey: process.env.NEXT_PUBLIC_API_OPEN_API,
 });
 
 function evaluateRepeatExpression(expr) {
@@ -92,31 +97,6 @@ function expandShorthandString(expr) {
     })
     .join("");
 }
-function sanitizeGPTTestcaseJSON(raw) {
-  // Fix expressions like "a"*500 + "b"*500 → "a*500 + b*500"
-  raw = raw.replace(
-    /"([a-zA-Z ])"\s*\*\s*\d+(\s*\+\s*"([a-zA-Z ])"\s*\*\s*\d+)*/g,
-    (match) => {
-      // Replace each Python-style bit with string-form shorthand
-      const cleaned = match
-        .split("+")
-        .map((segment) => {
-          const [_, char, count] =
-            segment.match(/"([^"]+)"\s*\*\s*(\d+)/) || [];
-          return `${char}*${count}`;
-        })
-        .join(" + ");
-      return `"${cleaned}"`;
-    }
-  );
-
-  // Also handle single * cases: "a"*500 → "a*500"
-  raw = raw.replace(/"([a-zA-Z ])"\s*\*\s*(\d+)/g, (_, char, count) => {
-    return `"${char}*${count}"`;
-  });
-
-  return raw;
-}
 
 function expandTestCaseObject(obj) {
   const actualInput = [];
@@ -136,9 +116,25 @@ export default async function (req, res) {
   if (req.method !== "POST") {
     res.status(300).json({ message: "http method is not allowed" });
   }
-  const { problem, constraint, code } = req.body;
+  const { problem, constraint, code, recruiterQuestion } = req.body;
   if (!problem || !code) {
     res.status(400).json({ message: "problem or code is required" });
+  }
+  const user = await authChecker(req, res);
+  if (!user) {
+    return;
+  }
+  const checkLimit = await limitCheker(req, res, user._id, 0);
+  if (!checkLimit) {
+    res
+      .status(301)
+      .json(
+        errorResponse(
+          "Daily limit completed , pleases upgrade to premium plan to cntinue",
+          "USER_ERROR"
+        )
+      );
+    return;
   }
 
   const messages = [
@@ -196,20 +192,40 @@ export default async function (req, res) {
         console.log("testcases are", data, result.data);
         try {
           await ConnectDb();
-          const newProb = await new Problem({
-            description: problem,
-            testCase: result.data,
-            constraints: constraint,
-            difficulty: "medium",
-            title: "Question",
-          });
-          const newProblem = await newProb.save();
-          console.log("new prob added successfully ", newProblem);
-          clearTimeout(timeout);
-          resolve({
-            status: "success",
-            url: `${process.env.NEXT_API_FRONTEND_PROBLEM}/problems/${newProblem._id}`,
-          });
+          if (recruiterQuestion) {
+            const newProb = new Problem({
+              description: problem,
+              testCase: result.data,
+              constraints: constraint,
+              difficulty: "medium",
+              title: "Question",
+            });
+            const newProblem = await newProb.save();
+            console.log("new prob added successfully in problems ", newProblem);
+            clearTimeout(timeout);
+            resolve({
+              status: "success",
+              url: `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/problems/${newProblem._id}`,
+            });
+          } else {
+            const newProb = new UserProblem({
+              description: problem,
+              testCase: result.data,
+              constraints: constraint,
+              difficulty: "medium",
+              title: "Question",
+            });
+            const newProblem = await newProb.save();
+            console.log(
+              "new prob added successfully inuserProblem ",
+              newProblem
+            );
+            clearTimeout(timeout);
+            resolve({
+              status: "success",
+              url: `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/problems/${newProblem._id}?RQP=${recruiterQuestion}`,
+            });
+          }
         } catch (error) {
           clearTimeout(timeout);
           resolve(`error in adding ${error}`);
