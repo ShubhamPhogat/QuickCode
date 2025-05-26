@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import CodeEditor from "@/components/CodeEditor";
+
 import Loader from "@/components/Loader";
 import axios from "axios";
 import ReactConfetti from "react-confetti";
 import { useRouter } from "next/router";
+import CodeEditor from "@/utils/CodeEditor";
 
 const TypingText = ({ texts, className }) => {
   const [displayText, setDisplayText] = useState("");
@@ -73,7 +74,10 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   const [codeValue, setCodeValue] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("C++"); // Default to C++
   const [problemUrl, setProblemUrl] = useState("");
+  const [mainFunction, setmainFunction] = useState("");
+  const [pythonMainFunction, setpythonMainFunction] = useState("");
   const [showConfetti, setShowConfetti] = useState(false);
 
   const detectSize = () => {
@@ -88,6 +92,26 @@ export default function Home() {
 
   const handleToggle = () => {
     setIsToggled((prev) => !prev);
+  };
+
+  // Language options for the dropdown
+  const languageOptions = [
+    { value: "C++", label: "C++ 11", fileExt: "cpp" },
+    { value: "C", label: "C", fileExt: "c" },
+    { value: "Java", label: "Java", fileExt: "java" },
+    { value: "Python", label: "Python", fileExt: "py" },
+    { value: "Javascript", label: "JavaScript", fileExt: "js" },
+    { value: "Typescript", label: "TypeScript", fileExt: "ts" },
+  ];
+
+  // Handle code editor changes
+  const handleCodeChange = (newCode) => {
+    setCodeValue(newCode);
+  };
+
+  // Handle language change
+  const handleLanguageChange = (e) => {
+    setSelectedLanguage(e.target.value);
   };
 
   useEffect(() => {
@@ -134,22 +158,32 @@ export default function Home() {
   const handleGenerateSolution = async () => {
     setLoading(true);
     try {
+      console.log(selectedLanguage);
       const token = localStorage.getItem("authToken");
       if (!token) {
         router.push("/auth");
       }
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/generate`,
-        { problem, constraints, hint },
+        {
+          problem,
+          constraints,
+          hint,
+          language: selectedLanguage, // Send selected language to backend
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-
+      console.log("response get from solution maker ⭐   ", response);
       setSolution(response.data);
-      setCodeValue(response.data.code);
+      setmainFunction(response.data.mainFunction);
+      let completeCode =
+        response.data.helperFunction + response.data.mainFunction;
+      setCodeValue(completeCode);
+      setpythonMainFunction(response.data.pythonMainFunction);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response) {
@@ -186,10 +220,12 @@ export default function Home() {
   const resetProblem = () => {
     setSolution(null);
     setProblemUrl(""); // Reset the URL when going back to the problem page
+    setCodeValue(""); // Clear the code editor
   };
 
   async function generateTestCase() {
     try {
+      console.log("gicing main func", mainFunction);
       const token = localStorage.getItem("authToken");
       if (!token) {
         router.push("/auth");
@@ -201,7 +237,10 @@ export default function Home() {
           code: codeValue,
           problem,
           constraint: constraints,
+          language: selectedLanguage, // Send selected language
           recruiterQuestion: isToggled,
+          mainFunction,
+          pythonMainFunction,
         },
         {
           headers: {
@@ -307,6 +346,29 @@ export default function Home() {
             />
           </motion.div>
 
+          {/* Language Selection */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 1.0, duration: 0.7 }}
+            className="w-full max-w-2xl mx-auto mb-8 relative"
+          >
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              Select Programming Language:
+            </label>
+            <select
+              value={selectedLanguage}
+              onChange={handleLanguageChange}
+              className="w-full px-6 py-4 rounded-full bg-[#1e293b]/80 text-gray-200 border border-blue-500/20 focus:outline-none focus:border-blue-500/40 transition-colors duration-300"
+            >
+              {languageOptions.map((lang) => (
+                <option key={lang.value} value={lang.value}>
+                  {lang.label}
+                </option>
+              ))}
+            </select>
+          </motion.div>
+
           <motion.div
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -325,7 +387,7 @@ export default function Home() {
           <motion.div
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 1.1, duration: 0.7 }}
+            transition={{ delay: 1.2, duration: 0.7 }}
             className="w-full max-w-2xl mx-auto mb-8 relative"
           >
             <input
@@ -340,7 +402,7 @@ export default function Home() {
           <motion.div
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 1.1, duration: 0.7 }}
+            transition={{ delay: 1.3, duration: 0.7 }}
             className="w-full max-w-2xl mx-auto mb-8 relative"
           >
             <input
@@ -392,42 +454,82 @@ export default function Home() {
             <p className="text-gray-300">{solution.explanation}</p>
           </motion.div>
 
+          {/* Language Selector in Solution View */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.7 }}
+            className="mb-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-white">
+                Solution Code
+              </h3>
+              <div className="flex items-center space-x-4">
+                <label className="text-gray-300 text-sm font-medium">
+                  Language:
+                </label>
+                <select
+                  value={selectedLanguage}
+                  onChange={handleLanguageChange}
+                  className="px-3 py-2 rounded-md bg-[#1e293b] text-gray-200 border border-blue-500/20 focus:outline-none focus:border-blue-500/40 transition-colors duration-300"
+                >
+                  {languageOptions.map((lang) => (
+                    <option key={lang.value} value={lang.value}>
+                      {lang.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Professional Code Editor */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.7 }}
-            className="mb-10"
+            className="mb-10 h-96"
           >
-            <h3 className="text-xl font-semibold mb-4 text-white">
-              Solution Code
-            </h3>
-            <CodeEditor code={codeValue} setCode={setCodeValue} />
-          </motion.div>
-          <p>
-            <h2 className="text-amber-500 font-bold"> Note</h2>
-            Are You a Recruiter ? , If you are a recruiter it is recommended to
-            check this , in order to keep the question private to you .
-          </p>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isToggled}
-              onChange={handleToggle}
-              className="hidden"
+            <CodeEditor
+              initialCode={codeValue}
+              language={selectedLanguage}
+              onChange={handleCodeChange}
             />
-            <div
-              className={`w-12 h-6 flex items-center bg-gray-300 rounded-full p-1 ${
-                isToggled ? "bg-green-500" : "bg-gray-400"
-              }`}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ${
-                  isToggled ? "translate-x-6" : "translate-x-0"
-                }`}
+          </motion.div>
+
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.7 }}
+            className="mb-6"
+          >
+            <h2 className="text-amber-500 font-bold mb-2">Note</h2>
+            <p className="text-gray-300 mb-4">
+              Are you a recruiter? If you are a recruiter, it is recommended to
+              check this option to keep the question private to you.
+            </p>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isToggled}
+                onChange={handleToggle}
+                className="hidden"
               />
-            </div>
-            <span>{isToggled ? "ON" : "OFF"}</span>
-          </label>
+              <div
+                className={`w-12 h-6 flex items-center bg-gray-300 rounded-full p-1 ${
+                  isToggled ? "bg-green-500" : "bg-gray-400"
+                }`}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ${
+                    isToggled ? "translate-x-6" : "translate-x-0"
+                  }`}
+                />
+              </div>
+              <span className="text-gray-300">{isToggled ? "ON" : "OFF"}</span>
+            </label>
+          </motion.div>
 
           <motion.button
             initial={{ y: 20, opacity: 0 }}
@@ -440,7 +542,7 @@ export default function Home() {
             {generatingTestLoader ? (
               <Loader className="mr-2" />
             ) : (
-              " Auto Generate Test Cases"
+              "Auto Generate Test Cases"
             )}
           </motion.button>
 

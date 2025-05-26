@@ -60,7 +60,11 @@ const ProblemList = () => {
           setProblems(res.data.data);
         }
       } catch (error) {
-        console.error("Error fetching problems:", error);
+        if (error?.response?.status === 401) {
+          router.push("/auth");
+        } else {
+          console.error("Unexpected error:", error);
+        }
       }
     }
   };
@@ -95,16 +99,6 @@ const ProblemList = () => {
           <button className="bg-white text-black px-4 py-2 rounded-md">
             All Topics
           </button>
-          {["Algorithms", "Database", "Shell", "Concurrency", "JavaScript"].map(
-            (topic) => (
-              <button
-                key={topic}
-                className="text-gray-300 hover:text-white px-4 py-2 rounded-md"
-              >
-                {topic}
-              </button>
-            )
-          )}
         </div>
 
         {/* Filters and Search */}

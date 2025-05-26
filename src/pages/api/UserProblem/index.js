@@ -16,7 +16,6 @@ export default async function (req, res) {
   if (!user) {
     return;
   }
-
   const { id } = req.query;
   console.log("this is id", id);
   if (!id) {

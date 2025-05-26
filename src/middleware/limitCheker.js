@@ -13,17 +13,19 @@ export default async function (req, res, userId, reduceCount) {
     if (existingUser.accountType === "premium") {
       return true;
     }
+    console.log("use prev count:", existingUser);
     const today = new Date().toDateString();
     const lastUserDate = existingUser.lastUsedDate.toDateString();
     if (today !== lastUserDate) {
       existingUser.requestCount = 1;
+      existingUser.lastUsedDate = today;
       await existingUser.save();
       return true;
     } else {
       if (existingUser.requestCount === 3) {
         return false;
       } else {
-        existingUser.requestCount += reduceCount;
+        existingUser.requestCount += parseInt(reduceCount);
         await existingUser.save();
         return true;
       }

@@ -1,9 +1,11 @@
 import { User } from "@/models/userModel";
+import connectDb from "@/utils/db";
 import { errorResponse, successResponse } from "@/utils/response";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 export default async function (req, res) {
+  await connectDb();
   if (req.method !== "POST") {
     res.status(301).json({ message: "http methods not allowed" });
   }

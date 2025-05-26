@@ -49,6 +49,12 @@ const userProblem = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  templateCode: {
+    type: String,
+  },
+  pythonTemplateCode: {
+    type: String,
+  },
 });
 
 export const UserProblem = mongoose.model("UserProblem", userProblem);

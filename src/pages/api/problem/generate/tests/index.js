@@ -116,24 +116,20 @@ export default async function (req, res) {
   if (req.method !== "POST") {
     res.status(300).json({ message: "http method is not allowed" });
   }
-  const { problem, constraint, code, recruiterQuestion } = req.body;
+  const {
+    problem,
+    constraint,
+    code,
+    recruiterQuestion,
+    mainFunction,
+    language,
+    pythonMainFunction,
+  } = req.body;
   if (!problem || !code) {
     res.status(400).json({ message: "problem or code is required" });
   }
   const user = await authChecker(req, res);
   if (!user) {
-    return;
-  }
-  const checkLimit = await limitCheker(req, res, user._id, 0);
-  if (!checkLimit) {
-    res
-      .status(301)
-      .json(
-        errorResponse(
-          "Daily limit completed , pleases upgrade to premium plan to cntinue",
-          "USER_ERROR"
-        )
-      );
     return;
   }
 
@@ -170,6 +166,8 @@ export default async function (req, res) {
       testCases.push(expandTestCaseObject(tc));
     }
 
+    console.log("going..", code, testCases, language, pythonMainFunction);
+
     const ws = new WebSocket(`${process.env.NEXT_PUBLIC_API_WEBSOCKET_URL}`);
     const result = await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -181,8 +179,9 @@ export default async function (req, res) {
           JSON.stringify({
             editorCode: code,
             testCase: testCases,
-            selectedLanguage: "C++",
+            selectedLanguage: language,
             all: true,
+            exampleTestCases: false,
           })
         );
       });
@@ -199,6 +198,8 @@ export default async function (req, res) {
               constraints: constraint,
               difficulty: "medium",
               title: "Question",
+              templateCode: mainFunction,
+              pythonTemplateCode: pythonMainFunction,
             });
             const newProblem = await newProb.save();
             console.log("new prob added successfully in problems ", newProblem);
@@ -214,6 +215,8 @@ export default async function (req, res) {
               constraints: constraint,
               difficulty: "medium",
               title: "Question",
+              templateCode: mainFunction,
+              pythonTemplateCode: pythonMainFunction,
             });
             const newProblem = await newProb.save();
             console.log(
