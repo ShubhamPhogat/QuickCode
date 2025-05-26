@@ -44,7 +44,7 @@ const ProblemDetailPage = () => {
   // Test case section states
   const [activeTestTab, setActiveTestTab] = useState("testcase");
 
-  const languages = ["Python", "JavaScript", "Java", "C++", "TypeScript"];
+  const languages = ["Python", "C++"];
 
   // Default code templates for different languages
   const defaultCodeTemplates = {
@@ -55,18 +55,7 @@ def solve():
 
 if __name__ == "__main__":
     solve()`,
-    JavaScript: `// Write your solution here
-function solve() {
-    // Your code here
-}
 
-solve();`,
-    Java: `// Write your solution here
-public class Solution {
-    public static void main(String[] args) {
-        // Your code here
-    }
-}`,
     "C++": `// Write your solution here
 #include <iostream>
 using namespace std;
@@ -75,12 +64,6 @@ int main() {
     // Your code here
     return 0;
 }`,
-    TypeScript: `// Write your solution here
-function solve(): void {
-    // Your code here
-}
-
-solve();`,
   };
 
   const wss = useRef(null);

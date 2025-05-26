@@ -97,11 +97,8 @@ export default function Home() {
   // Language options for the dropdown
   const languageOptions = [
     { value: "C++", label: "C++ 11", fileExt: "cpp" },
-    { value: "C", label: "C", fileExt: "c" },
-    { value: "Java", label: "Java", fileExt: "java" },
+
     { value: "Python", label: "Python", fileExt: "py" },
-    { value: "Javascript", label: "JavaScript", fileExt: "js" },
-    { value: "Typescript", label: "TypeScript", fileExt: "ts" },
   ];
 
   // Handle code editor changes
