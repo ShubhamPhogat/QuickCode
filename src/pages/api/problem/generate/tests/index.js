@@ -188,7 +188,8 @@ export default async function (req, res) {
 
       ws.on("message", async (data) => {
         const result = JSON.parse(data);
-        console.log("testcases are", data, result.data);
+        // console.log("testcases are", data, result.data);
+        console.log(recruiterQuestion, "recruiter");
         try {
           await ConnectDb();
           if (recruiterQuestion) {
@@ -206,7 +207,7 @@ export default async function (req, res) {
             clearTimeout(timeout);
             resolve({
               status: "success",
-              url: `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/problems/${newProblem._id}`,
+              url: `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/problems/${newProblem._id}?RQP=${recruiterQuestion}`,
             });
           } else {
             const newProb = new UserProblem({

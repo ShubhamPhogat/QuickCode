@@ -178,7 +178,7 @@ export default function Home() {
       setSolution(response.data);
       setmainFunction(response.data.mainFunction);
       let completeCode =
-        response.data.helperFunction + response.data.mainFunction;
+        response.data.helperFunction + "\n" + response.data.mainFunction;
       setCodeValue(completeCode);
       setpythonMainFunction(response.data.pythonMainFunction);
     } catch (error) {

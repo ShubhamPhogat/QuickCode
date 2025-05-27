@@ -250,28 +250,99 @@ int main() {
     );
   };
 
+  // const fetchProblemDetails = async (id, RQP) => {
+  //   setLoading(true);
+  //   try {
+  //     const token = localStorage.getItem("authToken");
+  //     if (!token) {
+  //       router.push("/auth");
+  //       return;
+  //     }
+
+  //     let res = null;
+  //     if (RQP === "true") {
+  //       res = await axios.get(
+  //         `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/get?id=${id}`,
+  //         { headers: { Authorization: `Bearer ${token}` } }
+  //       );
+  //     } else {
+  //       res = await axios.get(
+  //         `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/UserProblem?id=${id}`,
+  //         { headers: { Authorization: `Bearer ${token}` } }
+  //       );
+  //     }
+
+  //     if (res && res.data) {
+  //       setProblem(res.data._doc);
+  //       setAllTestCase(res.data._doc.testCase);
+  //       setexapmleTestcase(res.data.testCase);
+
+  //       if (res.data.testCase && res.data.testCase.length > 0) {
+  //         const formattedTestCases = formatTestCases(res.data.testCase);
+  //         setTestCases(formattedTestCases);
+  //       } else if (
+  //         res.data._doc.testCase &&
+  //         res.data._doc.testCase.length > 0
+  //       ) {
+  //         const formattedTestCases = formatTestCases(res.data._doc.testCase);
+  //         setTestCases(formattedTestCases);
+  //       } else {
+  //         setTestCases([]);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching problem details:", error);
+
+  //     // Handle 401 specifically
+  //     if (error.response?.status === 401) {
+  //       router.push("/auth");
+  //       return; // Important to return after redirect
+  //     }
+
+  //     // Only show toast for non-401 errors
+  //     if (error.response?.status !== 401) {
+  //       toast.error("Failed to load problem details");
+  //     }
+
+  //     setProblem(null);
+  //     setTestCases([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
   const fetchProblemDetails = async (id, RQP) => {
     setLoading(true);
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {
+        sessionStorage.setItem("redirectAfterAuth", router.asPath);
+
         router.push("/auth");
         return;
       }
 
       let res = null;
-      if (RQP === "true") {
-        res = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/get?id=${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        res = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/UserProblem?id=${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+      try {
+        if (RQP === "true") {
+          res = await axios.get(
+            `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/get?id=${id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } else {
+          res = await axios.get(
+            `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/UserProblem?id=${id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        }
+      } catch (error) {
+        if (error.response?.status === 401) {
+          router.push("/auth");
+          return null; // Return early to prevent further execution
+        }
+        throw error; // Re-throw other errors
       }
-      console.log(res);
+
+      // Rest of your success handling code...
       if (res && res.data) {
         setProblem(res.data._doc);
         setAllTestCase(res.data._doc.testCase);
@@ -291,12 +362,12 @@ int main() {
         }
       }
     } catch (error) {
-      console.error("Error fetching problem details:", error);
-      setProblem(null);
-      setTestCases([]);
-      toast.error("Failed to load problem details");
-      if (error?.status == 401) {
-        router.push("/auth");
+      if (error.response?.status !== 401) {
+        // Only handle non-401 errors
+        console.error("Error fetching problem details:", error);
+        toast.error("Failed to load problem details");
+        setProblem(null);
+        setTestCases([]);
       }
     } finally {
       setLoading(false);
@@ -435,6 +506,7 @@ int main() {
   useEffect(() => {
     if (router.isReady) {
       const { id, RQP } = router.query;
+      console.log("rqp", RQP, typeof RQP);
       if (id) {
         fetchProblemDetails(id, RQP);
       }

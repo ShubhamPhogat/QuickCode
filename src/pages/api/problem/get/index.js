@@ -12,17 +12,10 @@ export default async function (req, res) {
   }
   ConnectDb();
   const user = await authChecker(req, res);
-  const checkLimit = await limitCheker(req, res, user._id);
-  if (!checkLimit) {
-    res
-      .status(301)
-      .json(
-        errorResponse(
-          "Daily limit completed , pleases upgrade to premium plan to cntinue",
-          "USER_ERROR"
-        )
-      );
+  if (!user) {
+    return;
   }
+
   const { id } = req.query;
   if (!id) {
     try {

@@ -74,7 +74,9 @@ export default function AuthPage() {
           console.log(res.data.content);
 
           localStorage.setItem("authToken", res.data.content.data.token);
-          router.push("/");
+          const redirectPath =
+            sessionStorage.getItem("redirectAfterAuth") || "/";
+          router.push(redirectPath);
         }
       } else {
         const res = await axios.post(
@@ -116,13 +118,11 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 to-white p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-900 to-gray-800 p-4">
+      <div className="w-full max-w-md bg-gray-900 text-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-purple-700">WishShare</h1>
-          <p className="text-gray-600">
-            Create and share wishlists with friends
-          </p>
+          <h1 className="text-3xl font-bold text-purple-700">QuickCode</h1>
+          <p className="text-gray-600">Create and solve with friends</p>
         </div>
 
         <div className="flex mb-6">
@@ -130,7 +130,7 @@ export default function AuthPage() {
             className={`flex-1 py-2 font-medium ${
               isSignIn
                 ? "text-purple-700 border-b-2 border-purple-700"
-                : "text-gray-500"
+                : "text-white"
             }`}
             onClick={() => setIsSignIn(true)}
           >
@@ -140,7 +140,7 @@ export default function AuthPage() {
             className={`flex-1 py-2 font-medium ${
               !isSignIn
                 ? "text-purple-700 border-b-2 border-purple-700"
-                : "text-gray-500"
+                : "text-white"
             }`}
             onClick={() => setIsSignIn(false)}
           >
@@ -151,7 +151,7 @@ export default function AuthPage() {
         <form onSubmit={handleSubmit}>
           {!isSignIn && (
             <>
-              <div className="grid grid-cols-1 gap-4 mb-4 text-black">
+              <div className="grid grid-cols-1 gap-4 mb-4 text-white">
                 <div>
                   <label
                     className="block text-gray-700 text-sm font-medium mb-2"
@@ -162,7 +162,7 @@ export default function AuthPage() {
                   <input
                     id="name"
                     type="text"
-                    className="w-full text-black p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-500"
+                    className="w-full  p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-500"
                     placeholder="John"
                     name="name"
                     value={formData.name}
@@ -188,7 +188,7 @@ export default function AuthPage() {
               <input
                 id="email"
                 type="email"
-                className="pl-10 w-full  text-black p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-500"
+                className="pl-10 w-full   p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-500"
                 placeholder="john@example.com"
                 required
                 name="email"
@@ -212,7 +212,7 @@ export default function AuthPage() {
               <input
                 id="password"
                 type="password"
-                className="pl-10 w-full  text-black p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-500"
+                className="pl-10 w-full   p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-500"
                 placeholder="••••••••"
                 required
                 name="password"
