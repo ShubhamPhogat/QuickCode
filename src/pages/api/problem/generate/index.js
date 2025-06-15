@@ -57,38 +57,32 @@ export default async function (req, res) {
       content: `You are a professional coding master, specialized in creating correct and optimized solutions. 
       
       IMPORTANT FORMATTING RULES:
-      - Always split the solution into THREE separate functions: 
-        1. A helper function (containing the main logic) for ${selectedLanguage}
-        2. A main function (for input/output) for ${selectedLanguage}
-        3. A Python main function (pythonMainFunction) for Python input/output
-      - The helper function should contain all the problem-solving logic and include all the header files required at the top
-      - The main function should only handle input/output and call the helper function
+      - Generate a single, complete, ready-to-run solution for ${selectedLanguage}
+      - Include all necessary header files/imports at the top
+      - The code should be a complete, executable program
       - ${inputInstructions[selectedLanguage] || inputInstructions.cpp}
-      - In both main functions, only print the final answer, nothing else (no prompts like "enter size", etc.)
-      - Name the helper function appropriately based on the problem
-      - Do not include header files in the main function parts
+      - Only print the final answer, nothing else (no prompts like "enter size", etc.)
+      - The code should handle input/output properly and contain all the problem-solving logic
+      - Make sure the code is optimized and follows best practices
       
-      CRITICAL PYTHON REQUIREMENTS:
-      - The Python main function MUST start with "import sys" as the first line
-      - The Python main function MUST use sys.argv for command line arguments (sys.argv[1], sys.argv[2], etc.)
-      - The Python main function MUST have "if __name__ == '__main__':" at the end to call the main function
-      - The Python main function should contain both the helper logic AND input/output handling in one complete script
-      - Structure for Python: import sys → helper function → main function → if __name__ == '__main__': main()
+      CRITICAL PYTHON REQUIREMENTS (if Python is selected):
+      - The Python code MUST start with "import sys" as the first line
+      - The Python code MUST use sys.argv for command line arguments (sys.argv[1], sys.argv[2], etc.)
+      - The Python code MUST have "if __name__ == '__main__':" at the end to execute the main logic
+      - Structure for Python: import sys → functions → main logic → if __name__ == '__main__': main()
       
       RESPONSE FORMAT:
       You must return a JSON object with exactly these properties:
       {
         "explanation": "detailed explanation of the approach and algorithm",
-        "helperFunction": "the helper function code with all headers at top and logic",
-        "mainFunction": "the main function code that handles input/output and calls helper for ${selectedLanguage}",
-        "pythonMainFunction": "the complete Python script with import sys, helper function, main function, and if __name__ == '__main__': main()"
+        "completeCode": "the complete, ready-to-run solution code for ${selectedLanguage}"
       }
       
       Do NOT use markdown code blocks or any other formatting. Return only the plain JSON object.`,
     },
     {
       role: "user",
-      content: `Generate an optimal solution for this problem in ${selectedLanguage} and also provide a Python version:
+      content: `Generate an optimal complete solution for this problem in ${selectedLanguage}:
       
       Problem: ${problem}
       ${constraints.length ? `Constraints: ${constraints}` : ""}
@@ -96,43 +90,11 @@ export default async function (req, res) {
       
       Remember to:
       1. Analyze the problem and choose the appropriate DSA approach
-      2. Split into helper function (with headers + logic) and main function (input/output) for ${selectedLanguage}
-      3. Create a complete Python script that uses sys.argv for input and includes the execution guard
-      4. Use proper input handling for both ${selectedLanguage} and Python (sys.argv for Python)
-      5. Structure for Python: import sys → helper → main → if __name__ == '__main__': main()
+      2. Create a single, complete, executable program
+      3. Include all necessary headers/imports
+      4. Handle input/output properly according to the language requirements
+      5. Make the code optimized and efficient
       6. Return the response in the specified JSON format`,
-    },
-    {
-      role: "system",
-      content: `CRITICAL: Ensure the Python function follows this EXACT structure:
-
-      import sys
-      
-      def helper_function_name(parameters):
-          # all the logic here
-          return result
-      
-      def main():
-          # parse sys.argv[1], sys.argv[2], etc.
-          # call helper function
-          # print result
-      
-      if __name__ == "__main__":
-          main()
-      
-      The pythonMainFunction must be a complete, executable Python script that:
-      1. Starts with "import sys"
-      2. Contains the helper function with the algorithm logic
-      3. Contains a main() function that uses sys.argv for input
-      4. Ends with "if __name__ == '__main__': main()" to execute the script
-      
-      Example format:
-      {
-        "explanation": "your detailed explanation here",
-        "helperFunction": "complete helper function code with headers at top here",
-        "mainFunction": "complete main function code for ${selectedLanguage} here",
-        "pythonMainFunction": "import sys\\n\\ndef solve(params):\\n    # logic\\n    return result\\n\\ndef main():\\n    # use sys.argv[1], sys.argv[2], etc.\\n    result = solve(params)\\n    print(result)\\n\\nif __name__ == '__main__':\\n    main()"
-      }`,
     },
   ];
 
@@ -161,42 +123,39 @@ export default async function (req, res) {
     }
 
     // Validate response structure
-    if (
-      !data.explanation ||
-      !data.helperFunction ||
-      !data.mainFunction ||
-      !data.pythonMainFunction
-    ) {
+    if (!data.explanation || !data.completeCode) {
       throw new Error(
         "Invalid response structure from OpenAI - missing required fields"
       );
     }
 
     // Additional validation for Python code
-    const pythonCode = data.pythonMainFunction;
-    const requiredPythonElements = [
-      "import sys",
-      "def ",
-      "sys.argv",
-      'if __name__ == "__main__":',
-    ];
+    if (selectedLanguage === "python") {
+      const pythonCode = data.completeCode;
+      const requiredPythonElements = [
+        "import sys",
+        "def ",
+        "sys.argv",
+        'if __name__ == "__main__":',
+      ];
 
-    const missingElements = requiredPythonElements.filter(
-      (element) => !pythonCode.includes(element)
-    );
+      const missingElements = requiredPythonElements.filter(
+        (element) => !pythonCode.includes(element)
+      );
 
-    if (missingElements.length > 0) {
-      console.warn("Python code missing elements:", missingElements);
-      // Could add automatic fixes here or regenerate
+      if (missingElements.length > 0) {
+        console.warn("Python code missing elements:", missingElements);
+      }
     }
 
-    // Return structured response
+    // Return structured response - keeping the old fields as empty strings for compatibility
     res.status(200).json({
       language: selectedLanguage,
       explanation: data.explanation,
-      helperFunction: data.helperFunction,
-      mainFunction: data.mainFunction,
-      pythonMainFunction: data.pythonMainFunction,
+      code: data.completeCode, // New field with the complete solution
+      helperFunction: "", // Empty string for backward compatibility
+      mainFunction: "", // Empty string for backward compatibility
+      pythonMainFunction: "", // Empty string for backward compatibility
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

@@ -76,6 +76,7 @@ export default function Home() {
   const [codeValue, setCodeValue] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("C++"); // Default to C++
   const [problemUrl, setProblemUrl] = useState("");
+  const [problemTitle, setproblemTitle] = useState("");
   const [mainFunction, setmainFunction] = useState("");
   const [pythonMainFunction, setpythonMainFunction] = useState("");
   const [showConfetti, setShowConfetti] = useState(false);
@@ -161,7 +162,7 @@ export default function Home() {
         router.push("/auth");
       }
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/generate`,
+        `https://quickcode.solutions/api/problem/generate`,
         {
           problem,
           constraints,
@@ -177,8 +178,7 @@ export default function Home() {
       console.log("response get from solution maker ⭐   ", response);
       setSolution(response.data);
       setmainFunction(response.data.mainFunction);
-      let completeCode =
-        response.data.helperFunction + "\n" + response.data.mainFunction;
+      let completeCode = response.data.code;
       setCodeValue(completeCode);
       setpythonMainFunction(response.data.pythonMainFunction);
     } catch (error) {
@@ -229,7 +229,7 @@ export default function Home() {
       }
       setGeneratingTestLoader(true);
       const tests = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/generate/tests`,
+        `https://quickcode.solutions/api/problem/generate/tests`,
         {
           code: codeValue,
           problem,
@@ -238,6 +238,7 @@ export default function Home() {
           recruiterQuestion: isToggled,
           mainFunction,
           pythonMainFunction,
+          title: problemTitle,
         },
         {
           headers: {
@@ -281,8 +282,25 @@ export default function Home() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#0f172a] dark:bg-[#0f172a] transition-colors duration-300 relative overflow-hidden">
-      <div className="absolute bottom-0 right-0 w-3/4 h-3/4 bg-[#1e293b] rounded-tl-[50%] opacity-50 z-0"></div>
+    <div className="min-h-screen bg-[#0a0a0a] text-gray-200 relative overflow-hidden">
+      {/* Animated gradient orbs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-48 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-pink-600/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-3/4 left-1/2 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Grid pattern overlay */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.02]">
+        <div
+          className="h-full w-full"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)`,
+            backgroundSize: "50px 50px",
+          }}
+        />
+      </div>
 
       {showConfetti && (
         <ReactConfetti
@@ -297,15 +315,15 @@ export default function Home() {
       <div className="absolute top-6 right-6 z-10">
         <button
           onClick={toggleTheme}
-          className="px-5 py-2 rounded-full bg-gray-800 text-white font-medium transition-colors duration-300 flex items-center"
+          className="px-5 py-2.5 rounded-lg bg-[#1a1a1a] border border-gray-800 text-gray-300 font-medium hover:border-purple-600/50 transition-all duration-200 flex items-center gap-2"
         >
           {theme === "dark" ? (
             <>
-              <span className="mr-2">☀️</span> Light Mode
+              <span>☀️</span> Light Mode
             </>
           ) : (
             <>
-              <span className="mr-2">🌙</span> Dark Mode
+              <span>🌙</span> Dark Mode
             </>
           )}
         </button>
@@ -317,7 +335,7 @@ export default function Home() {
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.7 }}
-            className="text-6xl text-blue-400 mb-8"
+            className="text-6xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-8"
           >
             Welcome
           </motion.h1>
@@ -326,7 +344,7 @@ export default function Home() {
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.7 }}
-            className="text-3xl text-white mb-8"
+            className="text-3xl text-gray-200 mb-8"
           >
             Craft Your Own Problem
           </motion.h2>
@@ -339,7 +357,7 @@ export default function Home() {
           >
             <TypingText
               texts={instructionTexts}
-              className="text-lg leading-relaxed px-4"
+              className="text-lg leading-relaxed px-4 text-gray-300"
             />
           </motion.div>
 
@@ -348,15 +366,15 @@ export default function Home() {
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 1.0, duration: 0.7 }}
-            className="w-full max-w-2xl mx-auto mb-8 relative"
+            className="w-full max-w-2xl mx-auto mb-6"
           >
-            <label className="block text-gray-300 text-sm font-medium mb-2">
+            <label className="block text-gray-400 text-sm font-medium mb-3">
               Select Programming Language:
             </label>
             <select
               value={selectedLanguage}
               onChange={handleLanguageChange}
-              className="w-full px-6 py-4 rounded-full bg-[#1e293b]/80 text-gray-200 border border-blue-500/20 focus:outline-none focus:border-blue-500/40 transition-colors duration-300"
+              className="w-full px-6 py-4 rounded-xl bg-[#1a1a1a] text-gray-300 border border-gray-800 hover:border-purple-600/50 focus:border-purple-600 focus:outline-none transition-all duration-200 appearance-none cursor-pointer"
             >
               {languageOptions.map((lang) => (
                 <option key={lang.value} value={lang.value}>
@@ -370,14 +388,29 @@ export default function Home() {
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 1.1, duration: 0.7 }}
-            className="w-full max-w-2xl mx-auto mb-8 relative"
+            className="w-full max-w-2xl mx-auto mb-6"
+          >
+            <input
+              type="text"
+              value={problemTitle}
+              onChange={(e) => setproblemTitle(e.target.value)}
+              placeholder="Problem Title..."
+              className="w-full px-6 py-4 rounded-xl bg-[#1a1a1a] text-gray-300 placeholder-gray-500 border border-gray-800 hover:border-purple-600/50 focus:border-purple-600 focus:outline-none transition-all duration-200"
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 1.1, duration: 0.7 }}
+            className="w-full max-w-2xl mx-auto mb-6"
           >
             <input
               type="text"
               value={problem}
               onChange={(e) => setProblem(e.target.value)}
               placeholder="Enter your problem..."
-              className="w-full px-6 py-4 rounded-full bg-[#1e293b]/80 text-gray-200 border border-blue-500/20 focus:outline-none focus:border-blue-500/40 transition-colors duration-300"
+              className="w-full px-6 py-4 rounded-xl bg-[#1a1a1a] text-gray-300 placeholder-gray-500 border border-gray-800 hover:border-purple-600/50 focus:border-purple-600 focus:outline-none transition-all duration-200"
             />
           </motion.div>
 
@@ -385,14 +418,14 @@ export default function Home() {
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 1.2, duration: 0.7 }}
-            className="w-full max-w-2xl mx-auto mb-8 relative"
+            className="w-full max-w-2xl mx-auto mb-6"
           >
             <input
               type="text"
               value={constraints}
               onChange={(e) => setConstraints(e.target.value)}
               placeholder="Providing constraints would be useful to generate optimal code..."
-              className="w-full px-6 py-4 rounded-full bg-[#1e293b]/80 text-gray-200 border border-blue-500/20 focus:outline-none focus:border-blue-500/40 transition-colors duration-300"
+              className="w-full px-6 py-4 rounded-xl bg-[#1a1a1a] text-gray-300 placeholder-gray-500 border border-gray-800 hover:border-purple-600/50 focus:border-purple-600 focus:outline-none transition-all duration-200"
             />
           </motion.div>
 
@@ -400,14 +433,14 @@ export default function Home() {
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 1.3, duration: 0.7 }}
-            className="w-full max-w-2xl mx-auto mb-8 relative"
+            className="w-full max-w-2xl mx-auto mb-8"
           >
             <input
               type="text"
               value={hint}
               onChange={(e) => setHint(e.target.value)}
               placeholder="Providing hints would be useful to generate optimal code..."
-              className="w-full px-6 py-4 rounded-full bg-[#1e293b]/80 text-gray-200 border border-blue-500/20 focus:outline-none focus:border-blue-500/40 transition-colors duration-300"
+              className="w-full px-6 py-4 rounded-xl bg-[#1a1a1a] text-gray-300 placeholder-gray-500 border border-gray-800 hover:border-purple-600/50 focus:border-purple-600 focus:outline-none transition-all duration-200"
             />
           </motion.div>
 
@@ -417,7 +450,7 @@ export default function Home() {
             transition={{ delay: 1.4, duration: 0.7 }}
             onClick={handleGenerateSolution}
             disabled={loading}
-            className="px-8 py-3 rounded-full bg-[#1e293b] hover:bg-[#263548] text-white font-medium transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50"
+            className="px-8 py-3 mb-5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg shadow-purple-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader /> : "Generate Solution"}
           </motion.button>
@@ -434,7 +467,7 @@ export default function Home() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
             onClick={resetProblem}
-            className="mb-8 px-5 py-2 rounded-full bg-[#1e293b] text-white hover:bg-[#263548] transition-colors duration-300"
+            className="mb-8 px-5 py-2.5 rounded-lg bg-[#1a1a1a] text-gray-300 border border-gray-800 hover:border-purple-600/50 transition-all duration-200"
           >
             ← Back to Problem
           </motion.button>
@@ -443,12 +476,14 @@ export default function Home() {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.7 }}
-            className="mb-10 p-6 bg-[#1e293b] rounded-lg border border-blue-500/20"
+            className="mb-10 p-6 bg-[#1a1a1a] rounded-xl border border-gray-800"
           >
-            <h3 className="text-xl font-semibold mb-4 text-white">
+            <h3 className="text-xl font-semibold mb-4 text-purple-400">
               Explanation
             </h3>
-            <p className="text-gray-300">{solution.explanation}</p>
+            <p className="text-gray-300 leading-relaxed">
+              {solution.explanation}
+            </p>
           </motion.div>
 
           {/* Language Selector in Solution View */}
@@ -459,17 +494,17 @@ export default function Home() {
             className="mb-6"
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-white">
+              <h3 className="text-xl font-semibold text-purple-400">
                 Solution Code
               </h3>
               <div className="flex items-center space-x-4">
-                <label className="text-gray-300 text-sm font-medium">
+                <label className="text-gray-400 text-sm font-medium">
                   Language:
                 </label>
                 <select
                   value={selectedLanguage}
                   onChange={handleLanguageChange}
-                  className="px-3 py-2 rounded-md bg-[#1e293b] text-gray-200 border border-blue-500/20 focus:outline-none focus:border-blue-500/40 transition-colors duration-300"
+                  className="px-4 py-2 rounded-lg bg-[#1a1a1a] text-gray-300 border border-gray-800 hover:border-purple-600/50 focus:border-purple-600 focus:outline-none transition-all duration-200"
                 >
                   {languageOptions.map((lang) => (
                     <option key={lang.value} value={lang.value}>
@@ -486,7 +521,7 @@ export default function Home() {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.7 }}
-            className="mb-10 h-96"
+            className="mb-10 h-96 rounded-xl overflow-hidden border border-gray-800"
           >
             <CodeEditor
               initialCode={codeValue}
@@ -499,14 +534,14 @@ export default function Home() {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.7 }}
-            className="mb-6"
+            className="mb-8 p-6 bg-[#1a1a1a] rounded-xl border border-gray-800"
           >
-            <h2 className="text-amber-500 font-bold mb-2">Note</h2>
-            <p className="text-gray-300 mb-4">
+            <h2 className="text-amber-400 font-bold mb-3">Note</h2>
+            <p className="text-gray-300 mb-4 leading-relaxed">
               Are you a recruiter? If you are a recruiter, it is recommended to
               check this option to keep the question private to you.
             </p>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isToggled}
@@ -514,17 +549,19 @@ export default function Home() {
                 className="hidden"
               />
               <div
-                className={`w-12 h-6 flex items-center bg-gray-300 rounded-full p-1 ${
-                  isToggled ? "bg-green-500" : "bg-gray-400"
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ${
+                  isToggled ? "bg-purple-600" : "bg-gray-700"
                 }`}
               >
                 <div
-                  className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ${
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
                     isToggled ? "translate-x-6" : "translate-x-0"
                   }`}
                 />
               </div>
-              <span className="text-gray-300">{isToggled ? "ON" : "OFF"}</span>
+              <span className="text-gray-300 font-medium">
+                {isToggled ? "ON" : "OFF"}
+              </span>
             </label>
           </motion.div>
 
@@ -534,10 +571,13 @@ export default function Home() {
             transition={{ delay: 0.6, duration: 0.7 }}
             onClick={generateTestCase}
             disabled={generatingTestLoader}
-            className="px-6 py-3 rounded-full bg-blue-600/80 hover:bg-blue-700/80 text-white font-medium transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-700/50 focus:ring-offset-2 disabled:opacity-50 flex items-center"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg shadow-purple-600/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {generatingTestLoader ? (
-              <Loader className="mr-2" />
+              <>
+                <Loader className="w-5 h-5" />
+                <span>Generating...</span>
+              </>
             ) : (
               "Auto Generate Test Cases"
             )}
@@ -548,18 +588,21 @@ export default function Home() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.8, duration: 0.7 }}
-              className="mt-8 p-6 bg-[#1e293b] rounded-lg border border-blue-500/20"
+              className="mt-8 p-6 bg-[#1a1a1a] rounded-xl border border-gray-800"
             >
-              <h3 className="text-xl font-semibold mb-4 text-white">
-                Test Cases Generated Successfully!
-              </h3>
-              <div className="flex items-center mb-2">
-                <p className="text-gray-300 mr-2">Your problem URL:</p>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
+                <h3 className="text-xl font-semibold text-green-400">
+                  Test Cases Generated Successfully!
+                </h3>
+              </div>
+              <div className="bg-[#0a0a0a] rounded-lg p-4 mb-4">
+                <p className="text-gray-400 text-sm mb-2">Your problem URL:</p>
                 <a
                   href={problemUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-400 hover:text-blue-300 underline transition-colors"
+                  className="text-purple-400 hover:text-purple-300 underline transition-colors break-all"
                 >
                   {problemUrl}
                 </a>
@@ -569,11 +612,11 @@ export default function Home() {
                   navigator.clipboard.writeText(problemUrl);
                   alert("URL copied to clipboard!");
                 }}
-                className="mt-2 px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors duration-300 flex items-center"
+                className="px-4 py-2 rounded-lg bg-purple-600/20 text-purple-400 border border-purple-600/30 hover:bg-purple-600/30 transition-all duration-200 flex items-center gap-2"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 mr-2"
+                  className="h-4 w-4"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"

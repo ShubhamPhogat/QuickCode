@@ -96,11 +96,54 @@ export default function AuthPage() {
         type: "success",
       });
     } catch (error) {
-      console.log(error);
-      if (error.response.status === 400) {
+      console.log("Error caught:", error);
+
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        const message =
+          error.response.data?.message ||
+          error.response.data?.error ||
+          "Something went wrong";
+
+        if (status === 400) {
+          setToast({
+            show: true,
+            message: "Invalid Credentials",
+            type: "error",
+          });
+        } else if (status === 401) {
+          setToast({
+            show: true,
+            message: "Unauthorized access",
+            type: "error",
+          });
+        } else if (status >= 500) {
+          setToast({
+            show: true,
+            message: "Server error. Please try again later.",
+            type: "error",
+          });
+        } else {
+          setToast({
+            show: true,
+            message: message,
+            type: "error",
+          });
+        }
+      } else if (error.request) {
+        // Network error - no response received
         setToast({
           show: true,
-          message: "Invalid Credentials",
+          message: "Network error. Please check your connection and try again.",
+          type: "error",
+        });
+      } else {
+        // Something else happened
+        setToast({
+          show: true,
+          message: "An unexpected error occurred. Please try again.",
           type: "error",
         });
       }

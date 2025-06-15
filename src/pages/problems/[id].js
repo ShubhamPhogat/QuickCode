@@ -250,9 +250,8 @@ int main() {
     );
   };
 
-  // const fetchProblemDetails = async (id, RQP) => {
-  //   setLoading(true);
-  //   try {
+
+
   //     const token = localStorage.getItem("authToken");
   //     if (!token) {
   //       router.push("/auth");
@@ -325,12 +324,12 @@ int main() {
       try {
         if (RQP === "true") {
           res = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/problem/get?id=${id}`,
+            `http://localhost:3000/api/problem/get?id=${id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
         } else {
           res = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_FRONTEND_PROBLEM}/api/UserProblem?id=${id}`,
+            `http://localhost:3000/api/UserProblem?id=${id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
         }
@@ -400,16 +399,20 @@ int main() {
   useEffect(() => {
     const connectWebSocket = () => {
       try {
-        wss.current = new WebSocket(
-          `${process.env.NEXT_PUBLIC_API_WEBSOCKET_URL}`
-        );
+        wss.current = new WebSocket(`ws://13.60.242.155:8080`);
 
         wss.current.onopen = () => {
           console.log("Connected to the server");
         };
 
+        // Fixed WebSocket onmessage handler
         wss.current.onmessage = (event) => {
           const response = JSON.parse(event.data);
+
+          // Capture the current state before updating
+          const wasRunning = isRunning;
+          const wasSubmitting = isSubmitting;
+
           setIsRunning(false);
           setIsSubmitting(false);
           console.log("WebSocket response:", response);
@@ -417,7 +420,7 @@ int main() {
           // Handle compilation errors
           if (response.compilationError) {
             toast.error(`Compilation Error: ${response.error}`, {
-              id: isRunning ? "testCaseRun" : "codeSubmission",
+              id: wasRunning ? "testCaseRun" : "codeSubmission",
               duration: 5000,
             });
             if (response.stderr) {
@@ -425,13 +428,18 @@ int main() {
             }
             return;
           }
+          if (response.allPassed === false && response.failedTestCase) {
+            toast.error(
+              `Wrong answer for ${response.failedTestCase.input} expected ${response.failedTestCase.expected} got ${response.failedTestCase.actual} `
+            );
+          }
 
           // Handle runtime errors
           if (response.runtimeError) {
             toast.error(
               `Runtime Error: ${response.error || "Code execution failed"}`,
               {
-                id: isRunning ? "testCaseRun" : "codeSubmission",
+                id: wasRunning ? "testCaseRun" : "codeSubmission",
                 duration: 5000,
               }
             );
@@ -443,24 +451,26 @@ int main() {
 
           // Handle successful execution
           if (response.success) {
-            if (response.results) {
-              setTestResults(response.results);
-            }
+            const resultsToShow =
+              response.results || response.generatedResults || [];
+            console.log("Setting test results:", resultsToShow);
+
+            // Force update test results and switch tab
+            setTestResults(resultsToShow);
+            setActiveTestTab("result");
 
             if (response.allPassed) {
               toast.success("All test cases passed! 🎉", {
-                id: isRunning ? "testCaseRun" : "codeSubmission",
+                id: wasRunning ? "testCaseRun" : "codeSubmission",
                 duration: 3000,
               });
-            } else if (response.results) {
-              const passedCount = response.results.filter(
-                (r) => r.passed
-              ).length;
-              const totalCount = response.results.length;
+            } else if (resultsToShow.length > 0) {
+              const passedCount = resultsToShow.filter((r) => r.passed).length;
+              const totalCount = resultsToShow.length;
 
               if (passedCount === 0) {
                 toast.error(`All test cases failed (0/${totalCount})`, {
-                  id: isRunning ? "testCaseRun" : "codeSubmission",
+                  id: wasRunning ? "testCaseRun" : "codeSubmission",
                   duration: 4000,
                 });
               } else {
@@ -469,7 +479,7 @@ int main() {
                     totalCount - passedCount
                   } test case(s) failed (${passedCount}/${totalCount} passed)`,
                   {
-                    id: isRunning ? "testCaseRun" : "codeSubmission",
+                    id: wasRunning ? "testCaseRun" : "codeSubmission",
                     duration: 4000,
                   }
                 );
@@ -477,7 +487,7 @@ int main() {
             }
           } else {
             toast.error("Code execution failed", {
-              id: isRunning ? "testCaseRun" : "codeSubmission",
+              id: wasRunning ? "testCaseRun" : "codeSubmission",
             });
           }
         };
@@ -970,7 +980,7 @@ int main() {
                                       : "bg-red-900 text-red-200"
                                   }`}
                                 >
-                                  {result.output || "No output"}
+                                  {result.actual || "No output"}
                                 </span>
                               </div>
                               {result.error && (

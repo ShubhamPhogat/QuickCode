@@ -139,7 +139,7 @@ const CodeEditor = ({
         codeMirrorRef.current = null;
       }
     };
-  }, [mounted]);
+  }, [mounted, initialCode, language, onChange, theme]);
 
   // Update editor with initialCode when it changes
   useEffect(() => {

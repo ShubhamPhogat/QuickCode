@@ -1,4 +1,4 @@
-import { webSocketManager } from "@/webSocketManager";
+import { webSocketManager } from "@/utils/webSocketManager";
 
 const ws = null;
 
